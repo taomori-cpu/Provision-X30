@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>X30 Provisioner</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#F3F4F1; --surface:#FFFFFF; --ink:#1B1F1C; --muted:#5F6862; --line:#D6DAD4; --line-strong:#AEB5AF;
+  --accent:#1F63C9; --accent-ink:#FFFFFF; --accent-soft:#E3ECFA;
+  --good:#2C8A57; --good-soft:#DFF2E6; --warn:#B7791A; --warn-soft:#FBEFD6; --bad:#C43D2B; --bad-soft:#FBE3DF;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --cond:'IBM Plex Sans Condensed','Arial Narrow',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  color-scheme:dark;
+  --bg:#141714; --surface:#1C201D; --ink:#E6E9E4; --muted:#9AA39C; --line:#2C322D; --line-strong:#465049;
+  --accent:#5A93E8; --accent-ink:#0E1A2C; --accent-soft:#1B2A42;
+  --good:#5CBF86; --good-soft:#1B3527; --warn:#E0A83E; --warn-soft:#3A2D14; --bad:#E5705F; --bad-soft:#3E1F1A;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#141714; --surface:#1C201D; --ink:#E6E9E4; --muted:#9AA39C; --line:#2C322D; --line-strong:#465049;
+  --accent:#5A93E8; --accent-ink:#0E1A2C; --accent-soft:#1B2A42;
+  --good:#5CBF86; --good-soft:#1B3527; --warn:#E0A83E; --warn-soft:#3A2D14; --bad:#E5705F; --bad-soft:#3E1F1A;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans)}
+body{padding-block:0 48px}
+.wrap{max-width:760px;margin:0 auto;padding-inline:16px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:10px}
+h1{font:600 20px/1.1 var(--cond);margin:0;letter-spacing:.01em}
+h1 small{display:block;font:500 11px/1.2 var(--cond);color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-top:3px}
+h2{font:600 15px/1.2 var(--cond);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font:500 12px/1 var(--cond);letter-spacing:.04em;border:1px solid var(--line-strong);white-space:nowrap}
+.chip::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.chip.on{border-color:var(--accent);color:var(--accent)} .chip.on::before{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.chip.busy::before{background:var(--warn)}
+section{margin-top:22px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:500 14px var(--cond);letter-spacing:.03em;padding:10px 14px;border-radius:6px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible,textarea:focus-visible,.bit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=text],input[type=number],input[type=password],textarea{font:14px var(--mono);padding:7px 8px;border:1px solid var(--line-strong);border-radius:5px;background:var(--bg);color:var(--ink);width:100%}
+textarea{min-height:110px;resize:vertical}
+label.inline{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+.banner{border-radius:8px;padding:12px 14px;border:1px solid var(--line);margin-top:16px}
+.banner.bad{background:var(--bad-soft);border-color:var(--bad)} .banner.good{background:var(--good-soft);border-color:var(--good)} .banner.warn{background:var(--warn-soft);border-color:var(--warn)}
+.banner strong{font-family:var(--cond);letter-spacing:.03em}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:0}
+.kv dt{color:var(--muted);font:500 12px/1.7 var(--cond);letter-spacing:.06em;text-transform:uppercase}
+.kv dd{margin:0;font-family:var(--mono)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font:500 11px var(--cond);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line-strong)}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle;font-variant-numeric:tabular-nums}
+td.mono{font-family:var(--mono);white-space:nowrap}
+tr.block td{background:var(--bg);font:600 12px var(--cond);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-top:12px}
+td.name{white-space:nowrap} td.name small{display:block;color:var(--muted);font-size:11px;white-space:normal}
+td.target input[type=number],td.target input[type=text],td.target input[type=password]{min-width:120px}
+.bits{display:flex;flex-wrap:wrap;gap:4px}
+.bit{font:500 12px var(--cond);padding:4px 7px;border:1px solid var(--line-strong);border-radius:4px;background:var(--surface);cursor:pointer;user-select:none;min-width:30px;text-align:center}
+.bit.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.bits .num{font:12px var(--mono);color:var(--muted);align-self:center;margin-left:4px}
+.v-ok{color:var(--good);font-weight:500} .v-bad{color:var(--bad);font-weight:500} .v-warn{color:var(--warn);font-weight:500}
+pre.log{font:12px/1.45 var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;max-height:340px;overflow:auto;white-space:pre-wrap;word-break:break-all;margin:0}
+details summary{cursor:pointer;font:600 13px var(--cond);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.snap{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.snap .m{font-family:var(--mono)}
+.help{color:var(--muted);font-size:13px;margin:6px 0 0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:6px;font-size:14px;max-width:calc(100% - 32px);z-index:9}
+@media (prefers-reduced-motion:no-preference){ .chip.busy::before{animation:pulse 1s infinite alternate} @keyframes pulse{to{opacity:.3}} }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <h1>X30 Provisioner<small>Extronics iTAG X30 · XA over BLE</small></h1>
+  <span class="chip" id="chip">Disconnected</span>
+</div></header>
+
+<main class="wrap">
+  <div class="banner bad" id="unsupported" hidden>
+    <strong>Web Bluetooth is not available here.</strong>
+    <div class="help" style="color:inherit">It works in Chrome or Edge on Android and Windows, and needs the page served over HTTPS or from localhost. On iPhone use the Bluefy browser. If you opened this from an http:// address on the LAN, allow that address in chrome://flags/#unsafely-treat-insecure-origin-as-secure.</div>
+  </div>
+
+  <section>
+    <h2>1 · Connect</h2>
+    <div class="card">
+      <p class="help" style="margin:0 0 10px">Excite the tag first: hold the rear button until it flashes blue. Then pick it from the browser's device list. Connecting reads every block and stores a snapshot before anything is written.</p>
+      <div class="row">
+        <button class="primary" id="btnConnect">Connect &amp; read</button>
+        <button id="btnReread" disabled>Re-read</button>
+        <button id="btnDisconnect" disabled>Disconnect</button>
+      </div>
+      <div id="tag" hidden style="margin-top:14px">
+        <dl class="kv" id="tagInfo"></dl>
+      </div>
+      <details style="margin-top:12px"><summary>Link settings</summary>
+        <div style="margin-top:8px">
+          <label for="svc" class="help">Service UUID that holds the XA characteristic. Leave blank to search the likely range on connect; the value found is kept here.</label>
+          <input type="text" id="svc" placeholder="auto-detect">
+          <p class="help">Characteristic: <span style="font-family:var(--mono)">51f1f198-4321-9abc-4321-0067eaa0da40</span>. If auto-detect fails, run dump_x30_services.py on the PC while a tag is excited and paste the service UUID here.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section>
+    <h2>2 · Config</h2>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <label for="cfg" style="font-size:13px;color:var(--muted)">Paste site.json (keys starting with _ are ignored)</label>
+        <div class="row">
+          <button id="btnUseCfg">Fill form from JSON</button>
+          <label class="inline" style="cursor:pointer"><input type="file" id="fileRestore" accept="application/json" hidden><span style="text-decoration:underline">Restore from snapshot file…</span></label>
+        </div>
+      </div>
+      <textarea id="cfg" spellcheck="false" style="margin-top:8px">{
+  "dfrm": 7,
+  "bcnchmask": 2114,
+  "txp": 16
+}</textarea>
+      <div class="tbl" style="margin-top:12px">
+        <table id="form"><thead><tr><th>Field</th><th>On tag</th><th>Target</th><th>Apply</th></tr></thead><tbody></tbody></table>
+      </div>
+      <p class="help">Editing a target ticks Apply. Only ticked fields are sent, and only if they differ from the tag. Scan fields are write-only: the firmware never reports them back.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>3 · Write</h2>
+    <div class="card">
+      <div class="row">
+        <button class="primary" id="btnApply" disabled>Apply &amp; savecfg</button>
+        <button id="btnDry">Dry run</button>
+        <button id="btnClearTicks">Untick all</button>
+      </div>
+      <p class="help">Sends set* for ticked fields, stops before savecfg on the first rejection so the tag reverts on disconnect, then savecfg, then reconnects and reads every field back. res 0 alone is not trusted.</p>
+      <div id="verdict" class="banner" hidden></div>
+      <div class="tbl" id="resultWrap" hidden style="margin-top:12px">
+        <table id="result"><thead><tr><th>Field</th><th>Before</th><th>Target</th><th>After</th><th>Result</th></tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Snapshots on this device</h2>
+    <div class="card" id="snaps"></div>
+  </section>
+
+  <section>
+    <h2>Log</h2>
+    <div class="row" style="margin-bottom:8px"><button id="btnCopyLog">Copy log</button><button id="btnClearLog">Clear</button></div>
+    <pre class="log" id="log"></pre>
+  </section>
+</main>
+
+<script>
+'use strict';
+const XA_CHAR = '51f1f198-4321-9abc-4321-0067eaa0da40';
+const NAME_PREFIX = 'iTAG X30';
+const BUILD_PREFIX = 'iTAGX30';
+const REPLY_TIMEOUT = 10000, MAX_REPLY = 4096, SECRET = new Set(['pass']);
+const BLOCKS = {
+  wifi:['getwificfg','setwificfg'], platform:['getplatformcfg','setplatformcfg'],
+  beacon:['getbeaconcfg','setbeaconcfg'], motion:['getmotioncfg','setmotioncfg'],
+  ble:['getblecfg','setblecfg'], gps:['getgpscfg','setgpscfg'], status:['getstatus',null]
+};
+const CONFIG_BLOCKS = Object.keys(BLOCKS).filter(b => BLOCKS[b][1]);
+const CH = Array.from({length:13}, (_, i) => ({bit: 1 << (i + 1), label: String(i + 1)}));
+const FIELDS = [
+  {name:'dfrm', block:'wifi', write:'bcn.dfrm', read:'bcn.dfrm', kind:'int', lo:1, hi:7, note:'beacon formats', bits:[{bit:1,label:'IBSS'},{bit:2,label:'WDS'},{bit:4,label:'CCX'}]},
+  {name:'bcnchmask', block:'wifi', write:'bcn.chmask', read:'bcn.chmask', kind:'int', lo:2, hi:0x7FFE, note:'channels beaconed on', bits:CH},
+  {name:'txp', block:'wifi', write:'bcn.txp', read:'bcn.txp', kind:'int', note:'transmit power'},
+  {name:'rep', block:'wifi', write:'bcn.rep', read:'bcn.rep', kind:'int', lo:1, note:'beacon repeats'},
+  {name:'intms', block:'wifi', write:'bcn.intms', read:'bcn.intms', kind:'int', lo:0, note:'ms between repeats'},
+  {name:'oui', block:'wifi', write:'bcn.oui', read:'bcn.oui', kind:'str'},
+  {name:'bcmacccx', block:'wifi', write:'bcn.bcmacccx', read:'bcn.bcmacccx', kind:'mac', note:'CCX destination'},
+  {name:'bcmacibsswds', block:'wifi', write:'bcn.bcmacibsswds', read:'bcn.bcmacibsswds', kind:'mac', note:'IBSS/WDS destination'},
+  {name:'bletlvmax', block:'wifi', write:'bcn.bletlvmax', read:'bcn.bletlvmax', kind:'int', lo:0},
+  {name:'ssid', block:'wifi', write:'sta.ssid', read:'sta.ssid', kind:'str', note:'firmware update WLAN'},
+  {name:'pass', block:'wifi', write:'sta.pass', read:'sta.pass', kind:'str'},
+  {name:'url', block:'wifi', write:'sta.url', read:'sta.url', kind:'str', note:'firmware update URL'},
+  {name:'scanchmask', block:'wifi', write:'scan.chmask', read:null, kind:'int', lo:2, hi:0x7FFE, note:'channels scanned (write-only)', bits:CH},
+  {name:'ascn', block:'wifi', write:'scan.ascn', read:null, kind:'bool', note:'write-only'},
+  {name:'ascnmax', block:'wifi', write:'scan.ascnmax', read:null, kind:'int', lo:0, note:'write-only'},
+  {name:'ascnmin', block:'wifi', write:'scan.ascnmin', read:null, kind:'int', lo:0, note:'write-only'},
+  {name:'pscn', block:'wifi', write:'scan.pscn', read:null, kind:'int', lo:0, note:'write-only'},
+  {name:'act', block:'platform', write:'pcc.act', read:'pcc.act', kind:'int', note:'activation state'},
+  {name:'itvinmotion', block:'beacon', write:'itvinmotion', read:'itvinmotion', kind:'int', lo:1, note:'ms'},
+  {name:'itvstatic', block:'beacon', write:'itvstatic', read:'itvstatic', kind:'int', lo:1, note:'ms'},
+  {name:'itvputdown', block:'beacon', write:'itvputdown', read:'itvputdown', kind:'int', lo:1, note:'ms'},
+  {name:'itvonchg', block:'beacon', write:'itvonchg', read:'itvonchg', kind:'int', lo:1, note:'ms'},
+  {name:'sampthresh', block:'motion', write:'sampthresh', read:'sampthresh', kind:'int', lo:0},
+  {name:'stimeoutms', block:'motion', write:'stimeoutms', read:'stimeoutms', kind:'int', lo:0},
+  {name:'pdtimeoutms', block:'motion', write:'pdtimeoutms', read:'pdtimeoutms', kind:'int', lo:0},
+  {name:'bledur', block:'ble', write:'scan.dur', read:'scan.dur', kind:'int', lo:0, note:'ms'},
+  {name:'blerssi', block:'ble', write:'scan.rssi', read:'scan.rssi', kind:'int', lo:-127, hi:0, note:'dBm'},
+  {name:'gpsfixtimeoutms', block:'gps', write:'fixtimeoutms', read:'fixtimeoutms', kind:'int', lo:0, note:'ms'},
+];
+const FIELD = Object.fromEntries(FIELDS.map(f => [f.name, f]));
+
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const state = {device:null, server:null, xa:null, buf:[], pending:null, before:null, mac:null, name:'', busy:false};
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+// ---------- helpers mirroring provision_x30_tags.py ----------
+function dig(t, p){ for (const s of p.split('.')) { if (!t || typeof t !== 'object' || !(s in t)) return undefined; t = t[s]; } return t; }
+function plant(t, p, v){ const s = p.split('.'); for (const k of s.slice(0, -1)) t = (t[k] = t[k] || {}); t[s[s.length - 1]] = v; }
+function* leaves(t, pre = ''){ for (const [k, v] of Object.entries(t)) { if (v && typeof v === 'object') yield* leaves(v, pre + k + '.'); else yield [pre + k, v]; } }
+function redact(t){ if (!t || typeof t !== 'object') return t; const o = {}; for (const [k, v] of Object.entries(t)) o[k] = SECRET.has(k) && v ? '***' : redact(v); return o; }
+function shown(name, v){ return SECRET.has(name) && v ? '***' : v; }
+function fmt(v){ return v === undefined || v === null ? '' : typeof v === 'string' ? v : JSON.stringify(v); }
+function normMac(s){ const d = String(s || '').replace(/[^0-9a-f]/gi, ''); return d.length === 12 ? d.toLowerCase() : null; }
+function nameMac(n){ const m = /([0-9A-Fa-f]{12})\s*$/.exec(n || ''); return m ? m[1].toLowerCase() : null; }
+function encode(name, params){ const c = {name}; if (params && Object.keys(params).length) c.params = params; return JSON.stringify({cmd: c}); }
+function ok(r){ return !!r && r.res === 0; }
+function same(f, want, now){ if (f.kind === 'mac') return typeof now === 'string' && now.toUpperCase() === want; return typeof now === typeof want && now === want; }
+function validate(f, v){
+  if (f.kind === 'int') {
+    if (typeof v !== 'number' || !Number.isInteger(v)) throw new Error(f.name + ' wants an integer');
+    if ((f.lo !== undefined && v < f.lo) || (f.hi !== undefined && v > f.hi)) throw new Error(f.name + '=' + v + ' is outside ' + (f.lo ?? '') + '..' + (f.hi ?? ''));
+    return v;
+  }
+  if (f.kind === 'bool') { if (typeof v !== 'boolean') throw new Error(f.name + ' wants true or false'); return v; }
+  if (typeof v !== 'string') throw new Error(f.name + ' wants a string');
+  if (f.kind === 'mac') { if (!/^[0-9A-Fa-f]{12}$/.test(v)) throw new Error(f.name + ' wants 12 hex digits'); return v.toUpperCase(); }
+  return v;
+}
+function group(targets){ const out = {}; for (const [n, v] of Object.entries(targets)) { const f = FIELD[n]; plant(out[f.block] = out[f.block] || {}, f.write, v); } return out; }
+function checkIdentity(blocks, expected){
+  const p = blocks.platform || {}, build = dig(p, 'pce_ro.build'), mac = normMac(dig(p, 'pcc.mac'));
+  if (typeof build !== 'string' || !build.startsWith(BUILD_PREFIX)) throw new Error('build is ' + JSON.stringify(build) + ', not ' + BUILD_PREFIX);
+  if (!mac) throw new Error('getplatformcfg carries no pcc.mac');
+  if (expected && mac !== expected) throw new Error('pcc.mac is ' + mac + ', but the tag advertised ' + expected);
+  return mac;
+}
+
+// ---------- log / ui ----------
+const logEl = $('#log'); const lines = [];
+function log(t = ''){ lines.push(t); if (lines.length > 600) lines.shift(); logEl.textContent = lines.join('\n'); logEl.scrollTop = logEl.scrollHeight; }
+let toastTimer;
+function toast(msg){ let t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); } t.textContent = msg; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.remove(), 3500); }
+function setChip(text, cls){ const c = $('#chip'); c.textContent = text; c.className = 'chip ' + (cls || ''); }
+function connected(){ return !!(state.server && state.server.connected && state.xa); }
+function refreshButtons(){
+  const on = connected(), b = state.busy;
+  $('#btnConnect').disabled = b || !navigator.bluetooth; $('#btnReread').disabled = b || !state.device; $('#btnDisconnect').disabled = b || !state.device;
+  $('#btnApply').disabled = b || !on || !state.before;
+  setChip(b ? 'Working…' : on ? (state.name || 'Connected') : 'Disconnected', b ? 'on busy' : on ? 'on' : '');
+}
+function verdict(kind, title, detail){
+  const v = $('#verdict'); v.hidden = false; v.className = 'banner ' + kind; v.innerHTML = '<strong></strong><div class="help" style="color:inherit"></div>';
+  v.querySelector('strong').textContent = title; v.querySelector('div').textContent = detail || '';
+}
+
+// ---------- BLE ----------
+function candidateServices(){
+  const set = new Set(); const u = ($('#svc').value || '').trim().toLowerCase(); if (/^[0-9a-f-]{36}$/.test(u)) set.add(u);
+  for (let i = 0; i < 256; i++) set.add('51f1f198-4321-9abc-4321-0067eaa0da' + i.toString(16).padStart(2, '0'));
+  for (let i = 0; i < 16; i++) set.add('51f1f19' + i.toString(16) + '-4321-9abc-4321-0067eaa0da40');
+  return [...set];
+}
+function onNotify(ev){
+  const dv = ev.target.value; const chunk = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength);
+  state.buf.push(...chunk); if (state.buf.length > MAX_REPLY) { state.buf = []; return; }
+  let parsed; try { parsed = JSON.parse(new TextDecoder().decode(new Uint8Array(state.buf))); } catch { return; }
+  state.buf = []; const rsp = parsed && parsed.rsp; if (!rsp || typeof rsp !== 'object' || !state.pending) return;
+  if (rsp.name !== state.pending.name) { log('  <- ignored a reply to ' + rsp.name + ' while waiting for ' + state.pending.name); return; }
+  state.pending.resolve(rsp);
+}
+async function attach(){
+  let svc = null; const want = ($('#svc').value || '').trim().toLowerCase();
+  if (want) { try { svc = await state.server.getPrimaryService(want); await svc.getCharacteristic(XA_CHAR); } catch { svc = null; log('  service ' + want + ' not usable; searching'); } }
+  if (!svc) { const all = await state.server.getPrimaryServices(); for (const s of all) { try { await s.getCharacteristic(XA_CHAR); svc = s; break; } catch {} } }
+  if (!svc) throw new Error('No reachable service exposes the XA characteristic. Set the service UUID under Link settings (dump_x30_services.py prints it).');
+  state.xa = await svc.getCharacteristic(XA_CHAR);
+  state.xa.addEventListener('characteristicvaluechanged', onNotify);
+  await state.xa.startNotifications();
+  $('#svc').value = svc.uuid; store.set('x30.service', svc.uuid);
+  log('XA characteristic ready on service ' + svc.uuid);
+}
+function write(bytes){ return state.xa.writeValueWithoutResponse ? state.xa.writeValueWithoutResponse(bytes) : state.xa.writeValue(bytes); }
+async function command(name, params){
+  if (!connected()) throw new Error('not connected');
+  const payload = encode(name, params); state.buf = [];
+  log('  -> ' + JSON.stringify({cmd: redact(JSON.parse(payload).cmd)}));
+  let resolve; const reply = new Promise(r => { resolve = r; }); const timer = setTimeout(() => resolve(null), REPLY_TIMEOUT);
+  state.pending = {name, resolve};
+  try { await write(new TextEncoder().encode(payload)); }
+  catch (e) { clearTimeout(timer); state.pending = null; throw new Error(name + ' write failed (' + payload.length + ' bytes): ' + e.message); }
+  const rsp = await reply; clearTimeout(timer); state.pending = null;
+  if (!rsp) log('  <- no reply within ' + REPLY_TIMEOUT / 1000 + 's'); else log('  <- res=' + rsp.res + ' ' + JSON.stringify(redact(rsp.params || {})));
+  return rsp;
+}
+async function readBlocks(names){ const out = {}; for (const b of names) { const r = await command(BLOCKS[b][0]); out[b] = ok(r) ? (r.params || {}) : null; } return out; }
+async function connect(){
+  const device = await navigator.bluetooth.requestDevice({filters: [{namePrefix: NAME_PREFIX}], optionalServices: candidateServices()});
+  state.device = device; state.name = device.name || ''; state.mac = nameMac(state.name); state.before = null;
+  device.addEventListener('gattserverdisconnected', () => { state.xa = null; log('Link dropped.'); refreshButtons(); });
+  log('\n=== ' + state.name + ' ===');
+  state.server = await device.gatt.connect(); await attach();
+}
+async function reconnect(){
+  let last;
+  for (let i = 1; i <= 3; i++) {
+    try { if (state.server.connected) state.server.disconnect(); await sleep(1500); state.server = await state.device.gatt.connect(); await attach(); return; }
+    catch (e) { last = e; log('  reconnect attempt ' + i + ' failed: ' + e.message); await sleep(1000); }
+  }
+  throw last;
+}
+async function disconnectQuiet(){ try { if (state.server && state.server.connected) state.server.disconnect(); } catch {} }
+
+// ---------- read + snapshot ----------
+async function readAll(){
+  log('\n--- read ---');
+  const before = await readBlocks(Object.keys(BLOCKS));
+  const unread = CONFIG_BLOCKS.filter(b => !before[b]); if (unread.length) throw new Error('could not read ' + unread.join(', '));
+  const mac = checkIdentity(before, state.mac); state.mac = mac; state.before = before;
+  saveSnapshot(mac, before); renderTag(before); renderCurrent(before); return before;
+}
+function saveSnapshot(mac, blocks){
+  const snaps = store.get('x30.snapshots', []);
+  snaps.unshift({mac, name: state.name, taken: new Date().toISOString().slice(0, 19), blocks}); while (snaps.length > 20) snaps.pop();
+  store.set('x30.snapshots', snaps); renderSnaps(); log('Snapshot stored (' + mac + ')');
+}
+function renderSnaps(){
+  const snaps = store.get('x30.snapshots', []); const box = $('#snaps'); box.innerHTML = '';
+  if (!snaps.length) { box.innerHTML = '<p class="help" style="margin:0">None yet. A snapshot is taken every time a tag is read, and kept in this browser only.</p>'; return; }
+  snaps.forEach((s, i) => {
+    const d = document.createElement('div'); d.className = 'snap';
+    d.innerHTML = '<span><span class="m"></span><br><span class="help" style="margin:0"></span></span><span class="row"><button data-i="' + i + '" data-act="restore">Restore</button><button data-i="' + i + '" data-act="dl">Download</button></span>';
+    d.querySelector('.m').textContent = s.mac; d.querySelector('.help').textContent = s.taken.replace('T', ' '); box.appendChild(d);
+  });
+  box.onclick = ev => {
+    const b = ev.target.closest('button'); if (!b) return; const s = store.get('x30.snapshots', [])[+b.dataset.i]; if (!s) return;
+    if (b.dataset.act === 'restore') { toast(fillFromSnapshot(s) + ' field(s) ticked from snapshot ' + s.mac); }
+    else {
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(s, null, 2)], {type: 'application/json'}));
+      a.download = s.mac + '-' + s.taken.replace(/[-:T]/g, '').slice(0, 15) + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+  };
+}
+function renderTag(b){
+  const p = b.platform || {}, st = b.status || {}; const kv = $('#tagInfo'); kv.innerHTML = '';
+  const rows = [['MAC', dig(p, 'pcc.mac')], ['Build', dig(p, 'pce_ro.build') + ' ' + dig(p, 'pce_ro.fwversion')],
+    ['Battery', st.battpct !== undefined ? st.battpct + ' %' : '?'],
+    ['State', (st.oncharge ? 'charging' : 'on battery') + ', ' + (st.inmotion ? 'in motion' : 'static')], ['Activation', dig(p, 'pcc.act')]];
+  for (const [k, v] of rows) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = fmt(v); kv.append(dt, dd); }
+  $('#tag').hidden = false;
+}
+
+// ---------- form ----------
+function buildForm(){
+  const tb = $('#form tbody'); tb.innerHTML = ''; let lastBlock = '';
+  for (const f of FIELDS) {
+    if (f.block !== lastBlock) { lastBlock = f.block; const tr = document.createElement('tr'); tr.className = 'block'; tr.innerHTML = '<td colspan="4"></td>'; tr.firstChild.textContent = f.block + ' · ' + BLOCKS[f.block][1]; tb.appendChild(tr); }
+    const tr = document.createElement('tr'); tr.dataset.name = f.name;
+    tr.innerHTML = '<td class="name"></td><td class="mono cur"></td><td class="target"></td><td><input type="checkbox" class="apply" id="ap-' + f.name + '" aria-label="apply ' + f.name + '"></td>';
+    const nm = tr.querySelector('.name'); nm.textContent = f.name; if (f.note) { const s = document.createElement('small'); s.textContent = f.note; nm.appendChild(s); }
+    tr.querySelector('.cur').textContent = f.read ? '' : '(write-only)';
+    const td = tr.querySelector('.target');
+    if (f.bits) {
+      const box = document.createElement('div'); box.className = 'bits';
+      for (const b of f.bits) { const el = document.createElement('span'); el.className = 'bit'; el.textContent = b.label; el.dataset.bit = b.bit; el.tabIndex = 0; el.setAttribute('role', 'button'); box.appendChild(el); }
+      const num = document.createElement('span'); num.className = 'num'; num.textContent = '0'; box.appendChild(num);
+      const hid = document.createElement('input'); hid.type = 'hidden'; hid.id = 'f-' + f.name; hid.value = ''; box.appendChild(hid);
+      const toggle = el => { const v = parseInt(hid.value || '0', 10) ^ +el.dataset.bit; setMask(f, v); tick(f.name); };
+      box.addEventListener('click', ev => { const el = ev.target.closest('.bit'); if (el) toggle(el); });
+      box.addEventListener('keydown', ev => { const el = ev.target.closest('.bit'); if (el && (ev.key === ' ' || ev.key === 'Enter')) { ev.preventDefault(); toggle(el); } });
+      td.appendChild(box);
+    } else if (f.kind === 'bool') {
+      td.innerHTML = '<label class="inline"><input type="checkbox" id="f-' + f.name + '"> true</label>';
+      td.querySelector('input').addEventListener('change', () => tick(f.name));
+    } else {
+      const inp = document.createElement('input'); inp.id = 'f-' + f.name; inp.type = f.kind === 'int' ? 'number' : SECRET.has(f.name) ? 'password' : 'text'; if (f.kind === 'int') inp.step = '1';
+      inp.autocomplete = 'off'; inp.addEventListener('input', () => tick(f.name)); td.appendChild(inp);
+    }
+    tb.appendChild(tr);
+  }
+}
+function setMask(f, v){ const hid = $('#f-' + f.name); hid.value = v; const box = hid.parentElement; box.querySelector('.num').textContent = v; for (const el of box.querySelectorAll('.bit')) el.classList.toggle('on', (v & +el.dataset.bit) !== 0); }
+function tick(name, on = true){ $('#ap-' + name).checked = on; }
+function setField(name, v){ const f = FIELD[name]; if (f.bits) setMask(f, v || 0); else if (f.kind === 'bool') $('#f-' + name).checked = !!v; else $('#f-' + name).value = v ?? ''; }
+function renderCurrent(before){
+  for (const f of FIELDS) {
+    if (!f.read) continue; const v = dig(before[f.block], f.read);
+    $('tr[data-name="' + f.name + '"] .cur').textContent = fmt(shown(f.name, v));
+    if (!$('#ap-' + f.name).checked) setField(f.name, v);
+  }
+}
+function collectTargets(){
+  const t = {};
+  for (const f of FIELDS) {
+    if (!$('#ap-' + f.name).checked) continue; const el = $('#f-' + f.name); let v;
+    if (f.kind === 'bool') v = el.checked;
+    else if (f.kind === 'int') { if (el.value === '') throw new Error(f.name + ' is ticked but empty'); v = Number(el.value); }
+    else v = el.value;
+    t[f.name] = validate(f, v);
+  }
+  return t;
+}
+function fillFromConfig(doc){
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) throw new Error('config must be a JSON object');
+  let n = 0;
+  for (const [k, v] of Object.entries(doc)) { if (k.startsWith('_')) continue; const f = FIELD[k]; if (!f) throw new Error('unknown field ' + JSON.stringify(k)); setField(k, validate(f, v)); tick(k); n++; }
+  return n;
+}
+function fillFromSnapshot(s){
+  const blocks = s.blocks || {}; let n = 0;
+  for (const f of FIELDS) { if (!f.read) continue; const v = dig(blocks[f.block] || {}, f.read); if (v === undefined || v === null) continue; setField(f.name, validate(f, v)); tick(f.name); n++; }
+  return n;
+}
+
+// ---------- write flow ----------
+async function apply(){
+  let targets; try { targets = collectTargets(); } catch (e) { toast(e.message); return; }
+  if (!Object.keys(targets).length) { toast('Nothing ticked. Edit a target or fill from JSON.'); return; }
+  state.busy = true; refreshButtons(); $('#resultWrap').hidden = true; $('#verdict').hidden = true;
+  let before, changes = {}, crc = null;
+  try {
+    if (!connected()) throw new Error('not connected; press Re-read to reconnect');
+    before = await readAll();
+    for (const [k, v] of Object.entries(targets)) { const f = FIELD[k]; if (!f.read || !same(f, v, dig(before[f.block], f.read))) changes[k] = v; }
+    if (!Object.keys(changes).length) { log('\nAlready at target; nothing written.'); renderResult(targets, before, before, changes, null); return; }
+    log('\n--- writing ---');
+    for (const [block, params] of Object.entries(group(changes))) {
+      const setter = BLOCKS[block][1]; let rsp;
+      try { rsp = await command(setter, params); }
+      catch (e) { log('  ' + e.message + '; retrying one key per write'); for (const [p, v] of leaves(params)) { const c = {}; plant(c, p, v); rsp = await command(setter, c); if (!ok(rsp)) break; } }
+      if (!ok(rsp)) { await disconnectQuiet(); throw new Error(setter + ' rejected; not saved, the tag reverts on disconnect'); }
+    }
+    log('\n--- saving ---');
+    const s = await command('savecfg'); if (!ok(s)) { await disconnectQuiet(); throw new Error('savecfg failed; the tag reverts on disconnect'); }
+    crc = (s.params || {}).crc || null;
+    log('\n--- after (new connection) ---');
+    let after;
+    try { await reconnect(); after = await readBlocks([...new Set(Object.keys(targets).map(k => FIELD[k].block))]); }
+    catch (e) {
+      log('!! saved (crc ' + crc + ') but read-back failed: ' + e.message);
+      verdict('warn', 'UNVERIFIED', 'savecfg returned crc ' + crc + ' but the tag could not be re-read. Excite it again and press Re-read to confirm.'); return;
+    }
+    renderResult(targets, before, after, changes, crc);
+  } catch (e) {
+    log('!! ' + e.message); verdict('bad', 'FAILED', e.message);
+  } finally { state.busy = false; refreshButtons(); }
+}
+function renderResult(targets, before, after, changes, crc){
+  const tb = $('#result tbody'); tb.innerHTML = ''; const failed = [], unverified = [];
+  for (const name of Object.keys(targets).sort()) {
+    const f = FIELD[name], want = targets[name]; const tr = document.createElement('tr'); let was = '?', now = '?', cls, text;
+    if (!f.read) { unverified.push(name); cls = 'v-warn'; text = 'written, cannot be read back'; }
+    else {
+      was = dig(before[f.block], f.read); now = dig(after[f.block] || {}, f.read);
+      if (same(f, want, now)) { cls = 'v-ok'; text = name in changes ? 'ok' : 'ok (already set)'; }
+      else { failed.push(name); cls = 'v-bad'; text = now === was ? 'UNCHANGED, key not accepted' : 'DIVERGED'; }
+    }
+    tr.innerHTML = '<td class="name"></td><td class="mono"></td><td class="mono"></td><td class="mono"></td><td class="' + cls + '"></td>';
+    const c = tr.children; c[0].textContent = name; c[1].textContent = fmt(shown(name, was)); c[2].textContent = fmt(shown(name, want)); c[3].textContent = fmt(shown(name, now)); c[4].textContent = text; tb.appendChild(tr);
+  }
+  $('#resultWrap').hidden = false; if (crc) log('savecfg crc: ' + crc);
+  if (failed.length) verdict('bad', 'FAILED', 'Not applied: ' + failed.join(', ') + (crc ? ' (crc ' + crc + ')' : ''));
+  else if (unverified.length) verdict('warn', 'SAVED, PARTLY UNVERIFIED', 'Write-only fields cannot be read back: ' + unverified.join(', ') + (crc ? '. crc ' + crc : ''));
+  else verdict('good', Object.keys(changes).length ? 'OK, saved and verified' : 'OK, already at target', crc ? 'savecfg crc ' + crc : 'Nothing was written.');
+  for (const n of Object.keys(targets)) if (!failed.includes(n)) tick(n, false);
+  const merged = Object.assign({}, before, after); state.before = merged; renderCurrent(merged);
+}
+function dryRun(){
+  let targets; try { targets = collectTargets(); } catch (e) { toast(e.message); return; }
+  if (!Object.keys(targets).length) { toast('Nothing ticked.'); return; }
+  log('\n--- dry run ---');
+  for (const [block, params] of Object.entries(group(targets))) { const p = encode(BLOCKS[block][1], params); log(JSON.stringify({cmd: redact(JSON.parse(p).cmd)}) + '  (' + p.length + ' bytes)'); }
+  log('savecfg'); toast('Payloads are in the log; nothing was sent.');
+}
+
+// ---------- wiring ----------
+buildForm(); renderSnaps();
+$('#svc').value = store.get('x30.service', '') || '';
+$('#svc').addEventListener('change', () => store.set('x30.service', $('#svc').value.trim()));
+const savedCfg = store.get('x30.config', null); if (savedCfg) $('#cfg').value = savedCfg;
+$('#cfg').addEventListener('change', () => store.set('x30.config', $('#cfg').value));
+if (!navigator.bluetooth) $('#unsupported').hidden = false;
+async function guarded(fn){ if (state.busy) return; state.busy = true; refreshButtons(); try { await fn(); } catch (e) { log('!! ' + e.message); toast(e.message); } finally { state.busy = false; refreshButtons(); } }
+$('#btnConnect').onclick = () => guarded(async () => { await connect(); await readAll(); toast('Read ' + state.mac + '; snapshot stored.'); });
+$('#btnReread').onclick = () => guarded(async () => { if (!connected()) await reconnect(); await readAll(); });
+$('#btnDisconnect').onclick = () => guarded(async () => { await disconnectQuiet(); state.xa = null; log('Disconnected.'); });
+$('#btnApply').onclick = apply;
+$('#btnDry').onclick = dryRun;
+$('#btnClearTicks').onclick = () => { for (const f of FIELDS) tick(f.name, false); };
+$('#btnUseCfg').onclick = () => { try { const n = fillFromConfig(JSON.parse($('#cfg').value)); store.set('x30.config', $('#cfg').value); toast(n + ' field(s) ticked from JSON.'); } catch (e) { toast('Config: ' + e.message); } };
+$('#fileRestore').addEventListener('change', ev => {
+  const file = ev.target.files[0]; if (!file) return; const r = new FileReader();
+  r.onload = () => {
+    try {
+      const s = JSON.parse(r.result);
+      if (state.mac && s.mac && normMac(s.mac) !== state.mac) { toast('Snapshot is from ' + s.mac + ', not ' + state.mac); return; }
+      toast(fillFromSnapshot(s) + ' field(s) ticked from ' + file.name);
+    } catch (e) { toast('Snapshot: ' + e.message); }
+    ev.target.value = '';
+  };
+  r.readAsText(file);
+});
+$('#btnCopyLog').onclick = () => { navigator.clipboard.writeText(lines.join('\n')).then(() => toast('Log copied.')).catch(() => { const rng = document.createRange(); rng.selectNodeContents(logEl); getSelection().removeAllRanges(); getSelection().addRange(rng); }); };
+$('#btnClearLog').onclick = () => { lines.length = 0; logEl.textContent = ''; };
+refreshButtons();
+log('Ready. Excite a tag, then Connect & read.');
+</script>
+</body>
+</html>
