@@ -5,3 +5,5 @@ provision-log.csv
 __pycache__/
 *.pyc
 .venv/
+# real site config holds Wi-Fi credentials
+site.json
