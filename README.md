@@ -66,10 +66,9 @@ python serve_https.py
 
 and open the https:// address it prints on the phone.
 
-Web Bluetooth must be told the service UUID in advance and the Python script only records the
-characteristic. The page searches a range of likely UUIDs on connect and remembers the one that
-works; if that fails, run `python dump_x30_services.py` on the PC while a tag is excited and paste
-the service UUID under Link settings.
+The XA characteristic lives under service `51f1f198-1234-5678-1234-0067eaa0da40`, which the page
+declares by default. If a future firmware moves it, `python dump_x30_services.py` on the PC prints
+the new service UUID while a tag is excited; paste it under Link settings.
 
 Snapshots taken from the page live in that browser's local storage (last 20) and can be
 downloaded as the same JSON the Python script writes.

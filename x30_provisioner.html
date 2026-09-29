@@ -104,9 +104,9 @@ details summary{cursor:pointer;font:600 13px var(--cond);letter-spacing:.06em;te
       </div>
       <details style="margin-top:12px"><summary>Link settings</summary>
         <div style="margin-top:8px">
-          <label for="svc" class="help">Service UUID that holds the XA characteristic. Leave blank to search the likely range on connect; the value found is kept here.</label>
-          <input type="text" id="svc" placeholder="auto-detect">
-          <p class="help">Characteristic: <span style="font-family:var(--mono)">51f1f198-4321-9abc-4321-0067eaa0da40</span>. If auto-detect fails, run dump_x30_services.py on the PC while a tag is excited and paste the service UUID here.</p>
+          <label for="svc" class="help">Service UUID that holds the XA characteristic. Leave blank for the X30 default.</label>
+          <input type="text" id="svc" placeholder="51f1f198-1234-5678-1234-0067eaa0da40">
+          <p class="help">Characteristic: <span style="font-family:var(--mono)">51f1f198-4321-9abc-4321-0067eaa0da40</span>. If a future firmware moves it, dump_x30_services.py on the PC prints the new service UUID.</p>
         </div>
       </details>
     </div>
@@ -164,6 +164,7 @@ details summary{cursor:pointer;font:600 13px var(--cond);letter-spacing:.06em;te
 
 <script>
 'use strict';
+const XA_SERVICE = '51f1f198-1234-5678-1234-0067eaa0da40';
 const XA_CHAR = '51f1f198-4321-9abc-4321-0067eaa0da40';
 const NAME_PREFIX = 'iTAG X30';
 const BUILD_PREFIX = 'iTAGX30';
@@ -267,9 +268,7 @@ function verdict(kind, title, detail){
 
 // ---------- BLE ----------
 function candidateServices(){
-  const set = new Set(); const u = ($('#svc').value || '').trim().toLowerCase(); if (/^[0-9a-f-]{36}$/.test(u)) set.add(u);
-  for (let i = 0; i < 256; i++) set.add('51f1f198-4321-9abc-4321-0067eaa0da' + i.toString(16).padStart(2, '0'));
-  for (let i = 0; i < 16; i++) set.add('51f1f19' + i.toString(16) + '-4321-9abc-4321-0067eaa0da40');
+  const set = new Set([XA_SERVICE]); const u = ($('#svc').value || '').trim().toLowerCase(); if (/^[0-9a-f-]{36}$/.test(u)) set.add(u);
   return [...set];
 }
 function onNotify(ev){
@@ -281,7 +280,7 @@ function onNotify(ev){
   state.pending.resolve(rsp);
 }
 async function attach(){
-  let svc = null; const want = ($('#svc').value || '').trim().toLowerCase();
+  let svc = null; const want = ($('#svc').value || '').trim().toLowerCase() || XA_SERVICE;
   if (want) { try { svc = await state.server.getPrimaryService(want); await svc.getCharacteristic(XA_CHAR); } catch { svc = null; log('  service ' + want + ' not usable; searching'); } }
   if (!svc) { const all = await state.server.getPrimaryServices(); for (const s of all) { try { await s.getCharacteristic(XA_CHAR); svc = s; break; } catch {} } }
   if (!svc) throw new Error('No reachable service exposes the XA characteristic. Set the service UUID under Link settings (dump_x30_services.py prints it).');
