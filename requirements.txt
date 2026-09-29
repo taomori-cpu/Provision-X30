@@ -1,0 +1,2 @@
+bleak>=0.21
+pyserial>=3.5   # only for --wake (TED broadcast); read_x30_gen1_tags.py must sit beside the script

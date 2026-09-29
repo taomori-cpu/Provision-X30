@@ -1,0 +1,8 @@
+{
+  "_comment": "Copy to site.json and edit. Keys starting with _ are ignored. --list shows every field.",
+  "dfrm": 7,
+  "txp": 16,
+  "bcnchmask": 2114,
+  "ssid": "Site WLAN",
+  "pass": "change-me"
+}

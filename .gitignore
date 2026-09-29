@@ -1,0 +1,7 @@
+# per-tag config snapshots and the batch log are site data, not source
+snapshots/
+provision-log.csv
+*.pcap
+__pycache__/
+*.pyc
+.venv/
