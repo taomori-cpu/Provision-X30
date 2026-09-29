@@ -210,7 +210,7 @@ const FIELD = Object.fromEntries(FIELDS.map(f => [f.name, f]));
 
 const $ = s => document.querySelector(s);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const state = {device:null, server:null, xa:null, buf:[], pending:null, before:null, mac:null, name:'', busy:false};
+const state = {device:null, server:null, xa:null, buf:[], pending:null, before:null, mac:null, name:'', busy:false, expectDrop:false};
 const store = {
   get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
@@ -281,7 +281,8 @@ function onNotify(ev){
 }
 async function attach(){
   let svc = null; const want = ($('#svc').value || '').trim().toLowerCase() || XA_SERVICE;
-  if (want) { try { svc = await state.server.getPrimaryService(want); await svc.getCharacteristic(XA_CHAR); } catch { svc = null; log('  service ' + want + ' not usable; searching'); } }
+  try { svc = await state.server.getPrimaryService(want); await svc.getCharacteristic(XA_CHAR); }
+  catch (e) { if (!state.server.connected) throw new Error('link dropped during service discovery'); svc = null; log('  service ' + want + ' not usable (' + e.message + '); searching'); }
   if (!svc) { const all = await state.server.getPrimaryServices(); for (const s of all) { try { await s.getCharacteristic(XA_CHAR); svc = s; break; } catch {} } }
   if (!svc) throw new Error('No reachable service exposes the XA characteristic. Set the service UUID under Link settings (dump_x30_services.py prints it).');
   state.xa = await svc.getCharacteristic(XA_CHAR);
@@ -307,19 +308,36 @@ async function readBlocks(names){ const out = {}; for (const b of names) { const
 async function connect(){
   const device = await navigator.bluetooth.requestDevice({filters: [{namePrefix: NAME_PREFIX}], optionalServices: candidateServices()});
   state.device = device; state.name = device.name || ''; state.mac = nameMac(state.name); state.before = null;
-  device.addEventListener('gattserverdisconnected', () => { state.xa = null; log('Link dropped.'); refreshButtons(); });
+  device.addEventListener('gattserverdisconnected', () => { state.xa = null; if (!state.expectDrop) log('Link dropped.'); refreshButtons(); });
   log('\n=== ' + state.name + ' ===');
   state.server = await device.gatt.connect(); await attach();
 }
+async function dropLink(){
+  // Disconnect and wait until the stack confirms it; Chrome on Windows otherwise hands back a
+  // connection that is still being torn down, and the next getPrimaryService fails.
+  if (!state.server || !state.server.connected) return;
+  state.expectDrop = true;
+  try {
+    await new Promise(res => {
+      const t = setTimeout(res, 4000);
+      state.device.addEventListener('gattserverdisconnected', () => { clearTimeout(t); res(); }, {once: true});
+      state.server.disconnect();
+    });
+  } finally { state.expectDrop = false; }
+}
 async function reconnect(){
   let last;
-  for (let i = 1; i <= 3; i++) {
-    try { if (state.server.connected) state.server.disconnect(); await sleep(1500); state.server = await state.device.gatt.connect(); await attach(); return; }
-    catch (e) { last = e; log('  reconnect attempt ' + i + ' failed: ' + e.message); await sleep(1000); }
+  for (let i = 1; i <= 5; i++) {
+    try {
+      await dropLink(); await sleep(1500 + i * 1000);
+      state.server = await state.device.gatt.connect(); await sleep(400);
+      if (!state.server.connected) throw new Error('link dropped right after connect');
+      await attach(); return;
+    } catch (e) { last = e; log('  reconnect attempt ' + i + ' failed: ' + e.message); }
   }
   throw last;
 }
-async function disconnectQuiet(){ try { if (state.server && state.server.connected) state.server.disconnect(); } catch {} }
+async function disconnectQuiet(){ try { await dropLink(); } catch {} }
 
 // ---------- read + snapshot ----------
 async function readAll(){
