@@ -7,3 +7,6 @@ __pycache__/
 .venv/
 # real site config holds Wi-Fi credentials
 site.json
+# local TLS material
+cert.pem
+key.pem

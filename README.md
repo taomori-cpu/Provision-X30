@@ -57,7 +57,14 @@ python -m http.server 8000
 
 then on the phone open `chrome://flags/#unsafely-treat-insecure-origin-as-secure`, add
 `http://<pc-ip>:8000`, relaunch Chrome and browse to `http://<pc-ip>:8000/x30_provisioner.html`.
-Any HTTPS host (GitHub Pages, an internal web server) works without the flag.
+Any HTTPS host works without the flag. For a proper local HTTPS server see `serve_https.py`:
+make a certificate with mkcert (its notes explain how), then
+
+```
+python serve_https.py
+```
+
+and open the https:// address it prints on the phone.
 
 Web Bluetooth must be told the service UUID in advance and the Python script only records the
 characteristic. The page searches a range of likely UUIDs on connect and remembers the one that
